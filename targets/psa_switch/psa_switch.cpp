@@ -366,9 +366,11 @@ PsaSwitch::multicast(Packet *packet, unsigned int mgid, PktInstanceType path, un
 
 void
 PsaSwitch::ingress_thread() {
+  timespec t0, t1;
   PHV *phv;
 
   while (1) {
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t0);
     std::unique_ptr<Packet> packet;
     BMLOG_DEBUG("Popping packet from input buffer");
     input_buffer.pop_back(&packet);
@@ -512,6 +514,9 @@ PsaSwitch::ingress_thread() {
     auto egress_port = phv->get_field("psa_ingress_output_metadata.egress_port").get<port_t>();
     BMLOG_DEBUG_PKT(*packet, "Egress port is {}", egress_port);
     enqueue(egress_port, std::move(packet));
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t1);
+    auto diff = (t1.tv_sec - t0.tv_sec) * 1000000000LL + (t1.tv_nsec - t0.tv_nsec);
+    BMLOG_DEBUG_PKT(*packet, "Ingress processing time: {} ns", diff);
   }
 }
 
